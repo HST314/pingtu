@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>平涂色块转换器</title>
+<style>
+  :root {
+    --paper: #f2ebdd;
+    --ink: #17130f;
+    --coral: #ff5a36;
+    --blue: #2b4eff;
+    --yellow: #ffc93c;
+    --card: #fffdf8;
+    --muted: #6b6257;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    min-height: 100vh;
+    padding: 0 20px 64px;
+  }
+
+  .wrap { max-width: 860px; margin: 0 auto; }
+
+  /* ---------- 顶栏 ---------- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 0;
+    border-bottom: 3px solid var(--ink);
+    margin-bottom: 52px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: .14em;
+  }
+
+  .swatches { display: flex; gap: 4px; }
+  .swatches i {
+    display: block;
+    width: 13px; height: 13px;
+    border: 2px solid var(--ink);
+  }
+  .swatches i:nth-child(1) { background: var(--coral); }
+  .swatches i:nth-child(2) { background: var(--blue); }
+  .swatches i:nth-child(3) { background: var(--yellow); }
+
+  .chip {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border: 2px solid var(--ink);
+    background: var(--card);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .chip.hot { background: var(--yellow); }
+
+  /* ---------- 标题 ---------- */
+  .hero { margin-bottom: 34px; }
+
+  h1 {
+    margin: 0 0 16px;
+    font-size: clamp(34px, 7vw, 58px);
+    line-height: 1.06;
+    font-weight: 900;
+    letter-spacing: -.02em;
+  }
+
+  .hl {
+    display: inline-block;
+    background: var(--coral);
+    color: var(--card);
+    padding: 0 .18em;
+    transform: rotate(-.6deg);
+  }
+
+  .lede {
+    margin: 0;
+    max-width: 46ch;
+    font-size: 16px;
+    line-height: 1.7;
+    color: #3c352c;
+  }
+
+  /* ---------- 上传卡片 ---------- */
+  .card {
+    background: var(--card);
+    border: 3px solid var(--ink);
+    box-shadow: 10px 10px 0 var(--ink);
+    padding: 18px;
+  }
+
+  .drop {
+    position: relative;
+    display: block;
+    border: 3px dashed #b8ad99;
+    background: #fbf7ee;
+    min-height: 210px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+
+  .drop:hover, .drop.over {
+    border-color: var(--blue);
+    background: #f3f0ff;
+  }
+
+  .drop.filled {
+    border-style: solid;
+    border-color: var(--ink);
+    background: var(--card);
+    cursor: default;
+  }
+
+  .drop-empty {
+    min-height: 210px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-align: center;
+    padding: 24px;
+  }
+
+  .plus {
+    width: 46px; height: 46px;
+    display: grid; place-items: center;
+    border: 3px solid var(--ink);
+    background: var(--yellow);
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .drop-title { font-size: 17px; font-weight: 800; }
+  .drop-sub { font-size: 13px; color: var(--muted); }
+
+  .preview { position: relative; }
+  .preview img {
+    display: block;
+    width: 100%;
+    max-height: 420px;
+    object-fit: contain;
+    background: #ece5d7;
+  }
+
+  .filemeta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-top: 3px solid var(--ink);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .filemeta span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .link-btn {
+    flex: none;
+    border: 2px solid var(--ink);
+    background: var(--card);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 10px;
+    cursor: pointer;
+  }
+  .link-btn:hover { background: var(--yellow); }
+
+  /* ---------- 按钮行 ---------- */
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 3px solid var(--ink);
+    background: var(--card);
+    color: var(--ink);
+    font: inherit;
+    font-weight: 800;
+    font-size: 16px;
+    padding: 13px 30px;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 5px 5px 0 var(--ink);
+    transition: transform .08s, box-shadow .08s, background .15s;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .btn:hover:not(:disabled) { background: #fff3c9; }
+  .btn:active:not(:disabled) { transform: translate(5px, 5px); box-shadow: 0 0 0 var(--ink); }
+
+  .btn.primary { background: var(--coral); color: var(--card); }
+  .btn.primary:hover:not(:disabled) { background: #ff6c4b; }
+
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: .45;
+    box-shadow: 0 0 0 var(--ink);
+    transform: translate(5px, 5px);
+  }
+
+  .hint {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ---------- 加载 ---------- */
+  .loading {
+    position: absolute;
+    inset: 0;
+    background: rgba(23, 19, 15, .82);
+    color: var(--card);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    text-align: center;
+    padding: 24px;
+  }
+
+  .bars { display: flex; gap: 6px; }
+  .bars i {
+    width: 12px; height: 42px;
+    background: var(--card);
+    animation: hop .9s ease-in-out infinite;
+  }
+  .bars i:nth-child(2) { animation-delay: .12s; background: var(--yellow); }
+  .bars i:nth-child(3) { animation-delay: .24s; background: var(--coral); }
+  .bars i:nth-child(4) { animation-delay: .36s; background: var(--blue); }
+
+  @keyframes hop {
+    0%, 100% { transform: scaleY(.45); }
+    50% { transform: scaleY(1); }
+  }
+
+  .loading-title { font-size: 18px; font-weight: 800; }
+  .loading-time {
+    font-size: 13px;
+    opacity: .75;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- 结果 ---------- */
+  .result { margin-top: 52px; }
+
+  .result-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .result-head h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: .16em;
+  }
+
+  .result-head .meta {
+    font-size: 13px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .compare {
+    position: relative;
+    border: 3px solid var(--ink);
+    box-shadow: 10px 10px 0 var(--ink);
+    background: #ece5d7;
+    overflow: hidden;
+    cursor: ew-resize;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .compare img {
+    display: block;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+  }
+
+  .compare .top {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    clip-path: inset(0 0 0 50%);
+  }
+
+  .divider {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%;
+    width: 0;
+    border-left: 3px solid var(--card);
+    box-shadow: 0 0 0 1px rgba(23, 19, 15, .35);
+    pointer-events: none;
+  }
+
+  .knob {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 46px; height: 46px;
+    margin: -23px 0 0 -23px;
+    background: var(--card);
+    border: 3px solid var(--ink);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    font-weight: 900;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+
+  .compare .tag {
+    position: absolute;
+    top: 10px;
+    padding: 3px 9px;
+    background: var(--ink);
+    color: var(--card);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .1em;
+  }
+  .tag.before { left: 10px; }
+  .tag.after { right: 10px; background: var(--coral); }
+
+  .result-actions {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+  }
+
+  /* ---------- 提示条 ---------- */
+  .banner {
+    margin-top: 16px;
+    border: 3px solid var(--ink);
+    background: #ffe0d8;
+    padding: 12px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
+    box-shadow: 5px 5px 0 var(--ink);
+  }
+
+  [hidden] { display: none !important; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 18px;
+    border-top: 2px solid #cdc3ae;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  @media (max-width: 560px) {
+    .topbar { margin-bottom: 34px; }
+    .btn { flex: 1 1 auto; }
+    .card { padding: 12px; box-shadow: 6px 6px 0 var(--ink); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <span class="swatches"><i></i><i></i><i></i></span>
+      平涂转换器
+    </div>
+    <div class="chip" id="chip">就绪</div>
+  </div>
+
+  <div class="hero">
+    <h1>把照片压成<br><span class="hl">平涂色块</span></h1>
+    <p class="lede">上传一张图，模型会抹掉渐变、纹理和深浅变化，每个颜色区域只留一种纯色，构图保持不变。</p>
+  </div>
+
+  <div class="card">
+    <input type="file" id="file" accept="image/png,image/jpeg,image/webp" hidden>
+
+    <div class="drop" id="drop" role="button" tabindex="0" aria-label="选择图片">
+      <div class="drop-empty" id="dropEmpty">
+        <div class="plus">＋</div>
+        <div class="drop-title">拖一张图进来</div>
+        <div class="drop-sub">或点击选择 · JPG / PNG / WEBP · 不超过 10MB</div>
+      </div>
+
+      <div class="preview" id="previewBox" hidden>
+        <img id="preview" alt="上传的图片预览">
+        <div class="filemeta">
+          <span id="fname"></span>
+          <button type="button" class="link-btn" id="clear">换一张</button>
+        </div>
+        <div class="loading" id="loading" hidden>
+          <div class="bars"><i></i><i></i><i></i><i></i></div>
+          <div class="loading-title">正在重绘…</div>
+          <div class="loading-time" id="loadingTime">已用 0 秒</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="convert" disabled>开始转换</button>
+      <div class="hint" id="hint">每 2 分钟可转换 1 张</div>
+    </div>
+
+    <div class="banner" id="banner" hidden></div>
+  </div>
+
+  <section class="result" id="result" hidden>
+    <div class="result-head">
+      <h2>转换结果</h2>
+      <div class="meta" id="meta"></div>
+    </div>
+
+    <div class="compare" id="compare">
+      <img id="before" alt="原图">
+      <img class="top" id="after" alt="转换结果">
+      <span class="tag before">原图</span>
+      <span class="tag after">平涂</span>
+      <div class="divider" id="divider"><div class="knob">↔</div></div>
+    </div>
+
+    <div class="result-actions">
+      <a class="btn primary" id="download" download>下载图片</a>
+      <button class="btn" id="again">再做一张</button>
+    </div>
+  </section>
+
+  <footer>
+    结果图在本机保留 24 小时后自动清理 · 拖动中间的分隔线可以对比原图
+  </footer>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  const fileInput = $('file');
+  const drop = $('drop');
+  const dropEmpty = $('dropEmpty');
+  const previewBox = $('previewBox');
+  const preview = $('preview');
+  const fname = $('fname');
+  const clearBtn = $('clear');
+  const loading = $('loading');
+  const loadingTime = $('loadingTime');
+  const convertBtn = $('convert');
+  const hint = $('hint');
+  const chip = $('chip');
+  const banner = $('banner');
+  const result = $('result');
+  const before = $('before');
+  const after = $('after');
+  const compare = $('compare');
+  const divider = $('divider');
+  const meta = $('meta');
+  const download = $('download');
+  const again = $('again');
+
+  const MAX_MB = 10;
+  let file = null;
+  let objectUrl = null;
+  let cooldownUntil = 0;
+  let loadingSince = 0;
+  let busy = false;
+  let cooldownSeconds = 120;
+  let dailyRemaining = null;
+  let tickHandle = null;
+  let elapsedHandle = null;
+
+  const fmt = (s) => {
+    s = Math.max(0, Math.ceil(s));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+  };
+
+  const cooldownLabel = (s) => {
+    if (s >= 120) return `${Math.round(s / 60)} 分钟`;
+    if (s <= 60) return `${s} 秒`;
+    return `${Math.round(s / 60)} 分钟`;
+  };
+
+  function showBanner(text) {
+    banner.textContent = text;
+    banner.hidden = false;
+  }
+  function hideBanner() {
+    banner.hidden = true;
+  }
+
+  function updateHint() {
+    const base = `每 ${cooldownLabel(cooldownSeconds)}可转换 1 张`;
+    hint.textContent = dailyRemaining === null ? base : `${base} · 今日还剩 ${dailyRemaining} 张`;
+  }
+
+  function refreshButton() {
+    if (busy) { convertBtn.disabled = true; return; }
+    if (dailyRemaining === 0) {
+      convertBtn.disabled = true;
+      convertBtn.textContent = '今日额度已用完';
+      chip.textContent = '明日再来';
+      chip.classList.add('hot');
+      return;
+    }
+    const left = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
+    if (left > 0) {
+      convertBtn.disabled = true;
+      convertBtn.textContent = `冷却中 ${fmt(left)}`;
+      chip.textContent = `${fmt(left)} 后可转换`;
+      chip.classList.add('hot');
+    } else {
+      convertBtn.disabled = !file;
+      convertBtn.textContent = '开始转换';
+      chip.textContent = file ? '可以转换' : '就绪';
+      chip.classList.remove('hot');
+    }
+  }
+
+  function startTicker() {
+    if (tickHandle) clearInterval(tickHandle);
+    tickHandle = setInterval(refreshButton, 500);
+  }
+
+  function setFile(f) {
+    if (!f) return;
+    const okType = ['image/jpeg', 'image/png', 'image/webp'].includes(f.type);
+    if (!okType) {
+      showBanner('只支持 JPG / PNG / WEBP 格式');
+      return;
+    }
+    if (f.size > MAX_MB * 1024 * 1024) {
+      showBanner(`图片 ${(f.size / 1024 / 1024).toFixed(1)}MB，超过 ${MAX_MB}MB 限制`);
+      return;
+    }
+
+    hideBanner();
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(f);
+    file = f;
+
+    preview.src = objectUrl;
+    fname.textContent = `${f.name} · ${(f.size / 1024).toFixed(0)} KB`;
+    dropEmpty.hidden = true;
+    previewBox.hidden = false;
+    drop.classList.add('filled');
+    result.hidden = true;
+    refreshButton();
+  }
+
+  function resetFile() {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = null;
+    file = null;
+    fileInput.value = '';
+    previewBox.hidden = true;
+    dropEmpty.hidden = false;
+    drop.classList.remove('filled');
+    result.hidden = true;
+    hideBanner();
+    refreshButton();
+  }
+
+  function setCooldown(seconds) {
+    cooldownUntil = Date.now() + Math.max(0, seconds) * 1000;
+    refreshButton();
+  }
+
+  async function loadStatus() {
+    try {
+      const res = await fetch('/api/status');
+      const data = await res.json();
+      cooldownSeconds = data.cooldown_seconds || 120;
+      dailyRemaining = typeof data.daily_remaining === 'number' ? data.daily_remaining : null;
+      updateHint();
+      if (data.cooldown_remaining > 0) setCooldown(data.cooldown_remaining);
+      else refreshButton();
+    } catch (e) {
+      refreshButton();
+    }
+  }
+
+  async function convert() {
+    if (!file || busy) return;
+
+    busy = true;
+    hideBanner();
+    convertBtn.disabled = true;
+    convertBtn.textContent = '转换中…';
+    chip.textContent = '模型绘制中';
+    chip.classList.add('hot');
+    loading.hidden = false;
+    loadingSince = Date.now();
+    loadingTime.textContent = '已用 0 秒';
+    if (elapsedHandle) clearInterval(elapsedHandle);
+    elapsedHandle = setInterval(() => {
+      loadingTime.textContent = `已用 ${Math.round((Date.now() - loadingSince) / 1000)} 秒`;
+    }, 500);
+
+    try {
+      const res = await fetch('/api/convert', {
+        method: 'POST',
+        headers: { 'Content-Type': file.type || 'image/jpeg' },
+        body: file,
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const wait = data.retry_after || 0;
+        if (typeof data.daily_remaining === 'number') {
+          dailyRemaining = data.daily_remaining;
+          updateHint();
+        }
+        if (res.status === 429) {
+          setCooldown(wait || cooldownSeconds);
+          showBanner(data.detail || '请稍后再试');
+          refreshButton();
+        } else {
+          showBanner(data.detail || `转换失败（HTTP ${res.status}）`);
+        }
+        return;
+      }
+
+      before.src = objectUrl;
+      after.src = data.image_url;
+      download.href = data.download_url;
+      meta.textContent = `耗时 ${data.elapsed} 秒`;
+
+      result.hidden = false;
+      setDivider(50);
+      result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (typeof data.daily_remaining === 'number') {
+        dailyRemaining = data.daily_remaining;
+        updateHint();
+      }
+      setCooldown(data.cooldown_remaining || cooldownSeconds);
+    } catch (e) {
+      showBanner('网络异常，转换请求没有发出去');
+    } finally {
+      busy = false;
+      loading.hidden = true;
+      if (elapsedHandle) clearInterval(elapsedHandle);
+      refreshButton();
+    }
+  }
+
+  function setDivider(percent) {
+    const p = Math.max(0, Math.min(100, percent));
+    // 分隔线左侧露原图、右侧露结果
+    after.style.clipPath = `inset(0 0 0 ${p}%)`;
+    divider.style.left = `${p}%`;
+  }
+
+  let dragging = false;
+  function moveTo(clientX) {
+    const rect = compare.getBoundingClientRect();
+    setDivider(((clientX - rect.left) / rect.width) * 100);
+  }
+
+  compare.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    compare.setPointerCapture(e.pointerId);
+    moveTo(e.clientX);
+  });
+  compare.addEventListener('pointermove', (e) => {
+    if (dragging) moveTo(e.clientX);
+  });
+  const stopDrag = () => { dragging = false; };
+  compare.addEventListener('pointerup', stopDrag);
+  compare.addEventListener('pointercancel', stopDrag);
+
+  // 上传交互
+  drop.addEventListener('click', (e) => {
+    if (e.target === clearBtn || file) return;
+    fileInput.click();
+  });
+  drop.addEventListener('keydown', (e) => {
+    if (file) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      fileInput.click();
+    }
+  });
+  drop.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    drop.classList.add('over');
+  });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', (e) => {
+    e.preventDefault();
+    drop.classList.remove('over');
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) setFile(f);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files && fileInput.files[0]) setFile(fileInput.files[0]);
+  });
+
+  clearBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    resetFile();
+  });
+
+  convertBtn.addEventListener('click', convert);
+  again.addEventListener('click', () => {
+    resetFile();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  startTicker();
+  loadStatus();
+})();
+</script>
+</body>
+</html>

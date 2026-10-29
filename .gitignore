@@ -1,0 +1,10 @@
+.env
+p.md
+__pycache__/
+*.pyc
+output/
+data/
+uploads/
+.venv/
+*.tar.gz
+*.b64
